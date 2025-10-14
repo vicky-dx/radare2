@@ -563,6 +563,24 @@ static char *subvar(RAsmPluginSession *s, RAnalFunction *f, ut64 addr, int oplen
 		return false;
 	}
 
+	// Don't substitute variables in address calculation instructions
+	// like "add x29, sp, 0x20" which sets up frame pointers
+	if (tstr) {
+		const char *comma = strchr (tstr, ',');
+		if (comma) {
+			comma = strchr (comma + 1, ',');
+			if (comma && !strchr (tstr, '[')) {
+				// This is a three-operand instruction without memory access brackets
+				// Check if it's an add/sub instruction
+				if (strstr (tstr, "add") == tstr || strstr (tstr, "sub") == tstr ||
+				    strstr (tstr, "ADD") == tstr || strstr (tstr, "SUB") == tstr) {
+					// Don't substitute in these cases
+					return tstr;
+				}
+			}
+		}
+	}
+
 	if (p->subrel) {
 		char *rip;
 		if (p->pseudo) {
