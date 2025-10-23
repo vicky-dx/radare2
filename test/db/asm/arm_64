@@ -667,3 +667,26 @@ ad "tbnz x29, 0x30, 0x1fd0" 9DFE80B7
 ad "tbnz w25, 0x16, 0x14" B900B037
 ad "tbnz w30, 0xf, 4" 3E007837
 ad "tbnz w11, 0x1d, 0x18" CB00E837
+a "madd x0, x1, x2, x3" 9b020c20
+a "madd x7, x8, x9, x5" 9b091507
+a "madd w0, w1, w2, w3" 1b020c20
+a "madd w7, w8, w9, w5" 1b091507
+a "msub x0, x1, x2, x3" 9b028c20
+a "msub x7, x8, x9, x5" 9b099507
+a "msub w0, w1, w2, w3" 1b028c20
+a "msub w7, w8, w9, w5" 1b099507
+a "smaddl x0, w1, w2, x3" 9b220c20
+a "smaddl x5, w7, w9, x10" 9b2928e5
+a "smsubl x0, w1, w2, x3" 9b228c20
+a "smsubl x5, w7, w9, x10" 9b29a8e5
+a "smulh x0, x1, x2" 9b427c20
+a "smulh x5, x7, x9" 9b497ce5
+a "umaddl x0, w1, w2, x3" 9ba20c20
+a "umaddl x5, w7, w9, x10" 9ba928e5
+a "umsubl x0, w1, w2, x3" 9ba28c20
+a "umsubl x5, w7, w9, x10" 9ba9a8e5
+a "umulh x0, x1, x2" 9bc27c20
+a "umulh x5, x7, x9" 9bc97ce5
+
+
+

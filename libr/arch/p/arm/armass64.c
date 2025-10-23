@@ -902,6 +902,44 @@ static ut32 math(ArmOp *op, ut32 data, bool is64) {
 	return data | encode3regs (op);
 }
 
+/* For 4-register data processing (3 source) instructions like MADD, MSUB, etc.
+ * Encoding: Rd, Rn, Rm, Ra
+ * Format: op Rd, Rn, Rm, Ra
+ */
+static ut32 math4(ArmOp *op, ut32 data) {
+	check_cond (op->operands_count == 4);
+	check_cond (op->operands[0].type == ARM_GPR);
+	check_cond (op->operands[1].type == ARM_GPR);
+	check_cond (op->operands[2].type == ARM_GPR);
+	check_cond (op->operands[3].type == ARM_GPR);
+
+	ut32 Rd = op->operands[0].reg & 0x1f;
+	ut32 Rn = op->operands[1].reg & 0x1f;
+	ut32 Rm = op->operands[2].reg & 0x1f;
+	ut32 Ra = op->operands[3].reg & 0x1f;
+
+	return data | Rd | (Rn << 5) | (Ra << 10) | (Rm << 16);
+}
+
+/* For 3-register multiply-high instructions (SMULH, UMULH)
+ * Encoding: Rd, Rn, Rm
+ * Format: op Rd, Rn, Rm
+ * Ra field is set to 0x1f (xzr)
+ */
+static ut32 mulh(ArmOp *op, ut32 data) {
+	check_cond (op->operands_count == 3);
+	check_cond (op->operands[0].type == ARM_GPR);
+	check_cond (op->operands[1].type == ARM_GPR);
+	check_cond (op->operands[2].type == ARM_GPR);
+
+	ut32 Rd = op->operands[0].reg & 0x1f;
+	ut32 Rn = op->operands[1].reg & 0x1f;
+	ut32 Rm = op->operands[2].reg & 0x1f;
+	ut32 Ra = 0x1f; // xzr for multiply-high
+
+	return data | Rd | (Rn << 5) | (Ra << 10) | (Rm << 16);
+}
+
 static ut32 cmp(ArmOp *op) {
 	ut32 data = UT32_MAX;
 	int k = 0;
@@ -2200,8 +2238,37 @@ bool arm64ass (const char *str, ut64 addr, ut32 *op) {
 		*op = stp (&ops, 0x000040a9);
 	} else if (r_str_startswith (str, "sub") && !r_str_startswith (str, "subg") && !r_str_startswith (str, "subp")) { // w, skip this for mte versions of sub, e.g. subg, subp ins
 		*op = arithmetic (&ops, 0xd1);
+	/* Data-processing (3 source) - Multiply instructions */
 	} else if (r_str_startswith (str, "madd x")) {
-		*op = math (&ops, 0x9b, true);
+		/* MADD Xd, Xn, Xm, Xa: Xd = Xa + Xn * Xm */
+		*op = math4 (&ops, 0x9b000000);
+	} else if (r_str_startswith (str, "madd w")) {
+		/* MADD Wd, Wn, Wm, Wa: Wd = Wa + Wn * Wm */
+		*op = math4 (&ops, 0x1b000000);
+	} else if (r_str_startswith (str, "msub x")) {
+		/* MSUB Xd, Xn, Xm, Xa: Xd = Xa - Xn * Xm */
+		*op = math4 (&ops, 0x9b008000);
+	} else if (r_str_startswith (str, "msub w")) {
+		/* MSUB Wd, Wn, Wm, Wa: Wd = Wa - Wn * Wm */
+		*op = math4 (&ops, 0x1b008000);
+	} else if (r_str_startswith (str, "smaddl")) {
+		/* SMADDL Xd, Wn, Wm, Xa: Xd = Xa + (Wn * Wm) */
+		*op = math4 (&ops, 0x9b200000);
+	} else if (r_str_startswith (str, "smsubl")) {
+		/* SMSUBL Xd, Wn, Wm, Xa: Xd = Xa - (Wn * Wm) */
+		*op = math4 (&ops, 0x9b208000);
+	} else if (r_str_startswith (str, "smulh")) {
+		/* SMULH Xd, Xn, Xm: Xd = (Xn * Xm)[127:64] */
+		*op = mulh (&ops, 0x9b407c00);
+	} else if (r_str_startswith (str, "umaddl")) {
+		/* UMADDL Xd, Wn, Wm, Xa: Xd = Xa + (Wn * Wm) */
+		*op = math4 (&ops, 0x9ba00000);
+	} else if (r_str_startswith (str, "umsubl")) {
+		/* UMSUBL Xd, Wn, Wm, Xa: Xd = Xa - (Wn * Wm) */
+		*op = math4 (&ops, 0x9ba08000);
+	} else if (r_str_startswith (str, "umulh")) {
+		/* UMULH Xd, Xn, Xm: Xd = (Xn * Xm)[127:64] */
+		*op = mulh (&ops, 0x9bc07c00);
 	} else if (r_str_startswith (str, "add x")) {
 		// } else if (r_str_startswith (str, "add")) {
 		// *op = math (&ops, 0x8b, has64reg (str));
